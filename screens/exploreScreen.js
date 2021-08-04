@@ -1,14 +1,15 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Post from '../components/storyPost';
 import db from '../dbConfig';
+import searchCheck from '../searchCheck';
 
 export default class ExploreScreen extends React.Component
 {
   constructor(props)
   {
     super(props);
-    this.state = {allStories: [], refreshBtn: "Refresh"};
+    this.state = {allStories: [], refreshBtn: "Refresh", searchInput: ""};
   }
 
   componentWillMount()
@@ -20,7 +21,7 @@ export default class ExploreScreen extends React.Component
   render()
   {
       return (
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.container} behavior="padding" enabled>
 
         <View style={styles.header}>
           <Text style={styles.headerTxt}>
@@ -40,20 +41,30 @@ export default class ExploreScreen extends React.Component
           </Text>
         </TouchableOpacity>
 
+        <TextInput
+        placeholder="Search..."
+        onChangeText={(text) => {this.setState({searchInput: text})}}
+        style={styles.searchTxtInput}
+        />
+
         <ScrollView style={styles.scrollViewStyle} contentContainerStyle={styles.scrollViewStyle2}>
 
-          {this.state.allStories.map((i, index) => (
-            <Post
-            key={index}
-            title={i.title}
-            author={i.author}
-            story={i.story}
-            time={i.time}
-            />
-          ))}
+          {(this.state.allStories.map((i, index) => {
+            if (searchCheck(this.state.searchInput, i.title + i.author + i.story))
+            {
+              return (
+              <Post
+              key={index}
+              title={i.title}
+              author={i.author}
+              story={i.story}
+              time={i.time}
+              />)
+            }
+          }))}
         </ScrollView>
           
-      </View>
+      </KeyboardAvoidingView>
       );
   }
 
@@ -110,5 +121,16 @@ const styles = StyleSheet.create({
   btnTxt: {
     fontSize: 30,
     color: "#444444"
+  },
+  searchTxtInput: {
+    borderWidth: 2,
+    borderRadius: 25,
+    minHeight: 50,
+    height: 50,
+    width: 300,
+    paddingHorizontal: 10,
+    justifyContent: 'center',
+    marginVertical: 20,
+    backgroundColor: '#ededed'
   }
 });

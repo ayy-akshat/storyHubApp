@@ -2,6 +2,7 @@ import React from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, ToastAndroid, TouchableOpacity, View } from 'react-native';
 import db from '../dbConfig';
 import firebase from 'firebase';
+import doTheAlert from '../alertBasedOnOS';
 
 export default class WriteScreen extends React.Component
 {
@@ -69,17 +70,22 @@ export default class WriteScreen extends React.Component
     {
         if (this.state.titleInputTxt.trim().length < 4)
         {
-            alert("Title must be at least 4 characters long!");
+            doTheAlert("Title must be at least 4 characters long!");
             return;
         }
         if (this.state.authorInputTxt.trim().length < 4)
         {
-            alert("Author must be at least 4 characters long!");
+            doTheAlert("Author must be at least 4 characters long!");
             return;
         }
         if (this.state.storyInputTxt.trim().length < 10)
         {
-            alert("Story must be at least 10 characters long!");
+            doTheAlert("Story must be at least 10 characters long!");
+            return;
+        }
+        if (this.state.storyInputTxt.length > 2000)
+        {
+            doTheAlert("Story must be no more than 2000 characters!");
             return;
         }
         db.collection("stories").add(
@@ -90,10 +96,7 @@ export default class WriteScreen extends React.Component
                 time: firebase.firestore.Timestamp.now().toDate().getTime()
             }
         ).then(() => {
-            if (Platform.OS == "android")
-            {
-                ToastAndroid.show("Story posted!", ToastAndroid.SHORT);
-            }
+            doTheAlert("Story posted!");
         });
         this.setState({titleInputTxt: "", authorInputTxt: "", storyInputTxt: ""});
     }
