@@ -115,7 +115,6 @@ const styles = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: "#bcbcbc",
-      marginBottom: 20,
   },
   headerTxt: {
       fontSize: 30,
@@ -164,7 +163,7 @@ const styles = StyleSheet.create({
       padding: 50,
       paddingVertical: 20,
       width: 500,
-      height: 400,
+      height: 230,
       marginVertical: 20,
       maxWidth: "100%",
       textAlign: 'left',

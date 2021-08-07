@@ -97,7 +97,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
         paddingVertical: 50,
         backgroundColor: "#eeeeee",
-        justifyContent: 'center'
+        justifyContent: 'center',
+        alignSelf: 'center'
     },
     titleAndAuthorContainer: {
         width: 500,

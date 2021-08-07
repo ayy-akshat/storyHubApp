@@ -1,21 +1,28 @@
 import React from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Post from '../components/storyPost';
 import db from '../dbConfig';
 import searchCheck from '../searchCheck';
+
+const REFRESH1 = "Load more stories";
+const REFRESH2 = "Loading more stories...";
+
+const RELOAD1 = "Reload stories";
+const RELOAD2 = "Reloading...";
+
+const LOADINGSTORIESTEXT = "LOADING STORIES...";
 
 export default class ExploreScreen extends React.Component
 {
   constructor(props)
   {
     super(props);
-    this.state = {allStories: [], refreshBtn: "Refresh", searchInput: ""};
+    this.state = {allStories: [], refreshBtn: REFRESH1, reloadBtn: "Reload", searchInput: "", lastLoadedStory: null};
   }
 
-  componentWillMount()
+  componentDidMount()
   {
     this.getStories();
-    console.log("ok");
   }
 
   render()
@@ -29,56 +36,154 @@ export default class ExploreScreen extends React.Component
           </Text>
         </View>
 
-        <Text style={{
-          fontStyle: 'italic',
-          color: '#444444'
-        }}>
-          Don't see recent stories? Click the refresh button.
-        </Text>
-        <TouchableOpacity style={styles.btn} onPress={this.getStories}>
+        <View style={styles.topTxtContainer}>
+          <Text style={styles.topTxt}>
+            Keep scrolling to load new stories.
+          </Text>
+          <Text style={styles.topTxt}>
+            NOTE: As stories load, duplicate stories might start to come. To reload, click reload.
+          </Text>
+          <Text style={styles.topTxt}>
+          If you don't see recent stories, click reload.
+          </Text>
+        </View>
+
+        <TouchableOpacity style={styles.btn} onPress={this.reloadStories}>
           <Text style={styles.btnTxt}>
-            {this.state.refreshBtn}
+            {this.state.reloadBtn}
           </Text>
         </TouchableOpacity>
 
-        <TextInput
-        placeholder="Search..."
-        onChangeText={(text) => {this.setState({searchInput: text})}}
-        style={styles.searchTxtInput}
-        />
+        <View style={{display: 'flex', flexDirection: 'row', justifyContent: 'center', marginTop: 10}}>
+          <TextInput
+          placeholder="Search..."
+          onChangeText={(text) => {this.setState({searchInput: text})}}
+          style={styles.searchTxtInput}
+          value={this.state.searchInput}
+          />
+          <TouchableOpacity style={{justifyContent: 'center',
+          backgroundColor: '#dddddd',
+          width: 50,
+          height: 50,
+          borderWidth: 2,
+          borderRadius: 25,
+          borderTopLeftRadius: 0,
+          borderBottomLeftRadius: 0,
+          alignItems: 'center',
+          marginLeft: -2}}
+          onPress={() => {
+            this.setState({searchInput: ""});
+          }}>
+            <Text>
+              X
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-        <ScrollView style={styles.scrollViewStyle} contentContainerStyle={styles.scrollViewStyle2}>
+        <Text style={[styles.topTxt, {marginTop: 10}]}>
+          {this.state.searchInput.length === 0 ? this.state.allStories.length.toString() + " stories loaded" : "Showing results for \"" + this.state.searchInput + "\":"}
+        </Text>
 
-          {(this.state.allStories.map((i, index) => {
-            if (searchCheck(this.state.searchInput, i.title + i.author + i.story))
+        <FlatList
+        data={(this.state.refreshBtn === REFRESH1 ? this.state.allStories : [...this.state.allStories, {loadingMore: true}])}
+        renderItem={({item}) => {
+
+          if (item.loadingMore)
+          {
+            return (
+              <Text style={{
+                fontSize: 50,
+                marginVertical: 100,
+                color: '#aaaaaa',
+                alignSelf: 'center',
+                textAlign: 'center'
+              }}>
+                {LOADINGSTORIESTEXT}
+              </Text>
+            );
+          }
+          else
+          {
+            if (searchCheck(this.state.searchInput, item.data().title + item.data().author + item.data().story))
             {
               return (
-              <Post
-              key={index}
-              title={i.title}
-              author={i.author}
-              story={i.story}
-              time={i.time}
-              />)
+                <Post
+                title={item.data().title}
+                author={item.data().author}
+                story={item.data().story}
+                time={item.data().time}
+                />
+              );
             }
-          }))}
-        </ScrollView>
+          }
+        }}
+        keyExtractor={(item, index) => index.toString()}
+        style={{maxWidth: "100%"}}
+        onEndReached={this.getStories}
+        onEndReachedThreshold={0.1}
+        >
+
+        </FlatList>
           
       </KeyboardAvoidingView>
       );
   }
 
+  reloadStories = async () =>
+  {
+    this.setState({reloadBtn: RELOAD2});
+    await this.setState({allStories: [], lastLoadedStory: null});
+    await this.getStories();
+    this.setState({reloadBtn: RELOAD1});
+  }
+
   getStories = async () =>
   {
-    if (this.state.refreshBtn !== "Refresh")
+    if (this.state.refreshBtn !== REFRESH1)
     {
       return;
     }
-    this.setState({refreshBtn: "Getting stories..."});
-    var dbStories = (await db.collection("stories").get()).docs;
-    var stories = dbStories.map(s => s.data());
-    stories.sort((a,b) => b.time-a.time);
-    this.setState({allStories: stories, refreshBtn: "Refresh"});
+    this.setState({refreshBtn: REFRESH2});
+    var dbStories;
+    if (this.state.lastLoadedStory)
+    {
+      dbStories = (await db.collection("stories").orderBy("time", "desc").startAfter(this.state.lastLoadedStory).limit(5).get()).docs;
+      console.log("last story: ", this.state.lastLoadedStory.data().title);
+    }
+    else
+    {
+      dbStories = (await db.collection("stories").orderBy("time", "desc")                                       .limit(5).get()).docs;
+    }
+
+    console.log("dbStories", dbStories.map(d => d.data().title));
+
+    var o = {}
+
+    let lastStory;
+    dbStories.map((doc) =>
+    {
+      o[doc.id] = doc;
+      lastStory = doc;
+    });
+
+    let s = [];
+    for (var i in o)
+    {
+      s.push(o[i]);
+    }
+
+    s = s.sort((a,b) => b.time-a.time);
+
+    var all = this.state.allStories;
+
+    for (var i in s)
+    {
+      all.push(s[i]);
+    }
+    
+    this.setState({allStories: all, refreshBtn: REFRESH1, lastLoadedStory: lastStory});
+
+    console.log(all);
   }
 }
 
@@ -87,7 +192,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     width: "100%",
-    backgroundColor: "#cdcdcd"
+    backgroundColor: "#cdcdcd",
   },
   scrollViewStyle: {
     width: "100%",
@@ -106,11 +211,13 @@ const styles = StyleSheet.create({
   },
   headerTxt: {
     fontSize: 30,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    marginTop: 40
   },
   btn: {
     width: 300,
-    height: 100,
+    maxWidth: "95%",
+    height: 50,
     alignSelf: 'center',
     marginBottom: 10,
     backgroundColor: "#aaaaaa",
@@ -119,18 +226,30 @@ const styles = StyleSheet.create({
     borderRadius: 50
   },
   btnTxt: {
-    fontSize: 30,
+    fontSize: 25,
     color: "#444444"
   },
   searchTxtInput: {
     borderWidth: 2,
     borderRadius: 25,
+    borderBottomRightRadius: 0,
+    borderTopRightRadius: 0,
     minHeight: 50,
     height: 50,
     width: 300,
+    maxWidth: "95%",
     paddingHorizontal: 10,
     justifyContent: 'center',
-    marginVertical: 20,
     backgroundColor: '#ededed'
+  },
+  topTxtContainer: {
+    marginBottom: 10,
+    marginHorizontal: 10
+  },
+  topTxt: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+    color: '#444444',
+    marginVertical: 1
   }
 });
