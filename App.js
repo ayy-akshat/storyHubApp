@@ -1,9 +1,10 @@
 import React from 'react';
 import { StyleSheet, Text, View, Image } from 'react-native';
-import { createAppContainer } from 'react-navigation';
+import { createAppContainer, createSwitchNavigator } from 'react-navigation';
 import { createBottomTabNavigator } from 'react-navigation-tabs';
 import ExS from './screens/exploreScreen';
 import WrS from './screens/writeScreen';
+import LS from './logInScreen';
 
 export default class App extends React.Component
 {
@@ -11,7 +12,7 @@ export default class App extends React.Component
   {
     return (
       <View style={styles.container}>
-        <AppNav/>
+        <FullNav/>
       </View>
     );
   }
@@ -69,3 +70,14 @@ const tabNav = createBottomTabNavigator({
 });
 
 const AppNav = createAppContainer(tabNav);
+
+const nav = createSwitchNavigator({
+  Login: {
+    screen: LS
+  },
+  MainApp: {
+    screen: () => <AppNav/>
+  }
+});
+
+const FullNav = createAppContainer(nav);
